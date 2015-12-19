@@ -163,7 +163,7 @@ void Log::CloseFile() {
     }
 }
 
-inline void Log::ReallyPrintLine(char *line) 
+inline void Log::ReallyPrintLine(char const *line) 
 {
     if (m_todebug) OutputDebugString(line);
     if (m_toconsole) {
@@ -176,7 +176,7 @@ inline void Log::ReallyPrintLine(char *line)
     }
 }
 
-void Log::ReallyPrint(char *format, va_list ap) 
+void Log::ReallyPrint(char const *format, va_list ap) 
 {
 	// Write current time to the log if necessary
 	time_t current = time(NULL);
@@ -194,7 +194,7 @@ void Log::ReallyPrint(char *format, va_list ap)
 	}
 
 	// Exclude path prefix from the format string if needed
-	char *format_ptr = format;
+	char const *format_ptr = format;
 	if (m_prefix != NULL && strlen(format) > m_prefix_len + 4) {
 #ifndef _DEBUG
 		if (memcmp(format, m_prefix, m_prefix_len) == 0)
