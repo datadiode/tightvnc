@@ -20,8 +20,11 @@
 #include <stdio.h>
 #include <time.h>
 
-// Macros for sticking in the current file name
-#define VNCLOG(s)	(__FILE__ ":\t" s)
+// Macro for sticking in the current file name and source code line.
+// VNCLOG() returns a pointer to the '(' located right after the filename.
+// The prepended backslash serves as a last-resort sentinel when backward
+// searching for the beginning of the file name.
+#define VNCLOG(s) "\\" __FILE__ "(" _CRT_STRINGIZE(__LINE__) "):\t" s + sizeof __FILE__
 
 class Log  
 {
@@ -87,10 +90,6 @@ private:
     HANDLE hlogfile;
 	char *m_filename;
 	bool m_append;
-
-	// Path prefix to remove from log records
-	char *m_prefix;
-	size_t m_prefix_len;
 
 	time_t m_lastLogTime;
 };

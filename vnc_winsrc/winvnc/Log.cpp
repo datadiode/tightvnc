@@ -32,17 +32,6 @@ Log::Log(int mode, int level, char *filename, bool append)
     SetFile(filename, append);
     SetMode(mode);
 	SetLevel(level);
-
-	// If the compiler returns full path names in __FILE__,
-	// remember the path prefix, to remove it from the log messages.
-	char *path = __FILE__;
-	char *ptr = strrchr(path, '\\');
-	if (ptr != NULL) {
-		m_prefix_len = ptr + 1 - path;
-		m_prefix = (char *)malloc(m_prefix_len + 1);
-		memcpy(m_prefix, path, m_prefix_len);
-		m_prefix[m_prefix_len] = '\0';
-	}
 }
 
 void Log::SetMode(int mode) {
@@ -194,15 +183,11 @@ void Log::ReallyPrint(char const *format, va_list ap)
 	}
 
 	// Exclude path prefix from the format string if needed
-	char const *format_ptr = format;
-	if (m_prefix != NULL && strlen(format) > m_prefix_len + 4) {
-#ifndef _DEBUG
-		if (memcmp(format, m_prefix, m_prefix_len) == 0)
-			format_ptr = format + m_prefix_len;
-#else
-		if (_strnicmp(format, m_prefix, m_prefix_len) == 0)
-			format_ptr = format + m_prefix_len;
-#endif
+	const char *format_ptr = format;
+	if (*format == '(') {
+		// Travel back to start of filename, relying on the extra backslash
+		// prepended inside VNCLOG() to ensure that the loop will always end.
+		do format_ptr = format; while (*--format != '\\');
 	}
 
 	// Prepare the complete log message
@@ -252,7 +237,5 @@ Log::~Log()
 {
 	if (m_filename != NULL)
 		free(m_filename);
-	if (m_prefix != NULL)
-		free(m_prefix);
     CloseFile();
 }
