@@ -216,7 +216,7 @@ void Log::ReallyPrint(char const *format, va_list ap)
 	ReallyPrintLine(line);
 }
 
-omni_mutex &Log::Validate(omni_mutex &mutex, char const *format)
+UINT_PTR Log::Validate(omni_mutex &mutex, char const *format)
 {
 	UINT_PTR const history = omni_mutex::history();
 	if ((history & mutex.bit_value) < (history & mutex.bit_value - 1))
@@ -230,7 +230,7 @@ omni_mutex &Log::Validate(omni_mutex &mutex, char const *format)
 		*p = '\0';
 		Print(LL_INTWARN, format, q);
 	}
-	return mutex;
+	return history;
 }
 
 Log::~Log()

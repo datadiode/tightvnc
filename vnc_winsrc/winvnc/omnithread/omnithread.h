@@ -230,9 +230,9 @@ class _OMNITHREAD_NTDLL_ omni_mutex_lock {
 public:
     omni_mutex& mutex;
     UINT_PTR const history;
-    omni_mutex_lock(omni_mutex& m)
+    omni_mutex_lock(omni_mutex& m, UINT_PTR h = omni_mutex::history())
         : mutex(m)
-        , history(omni_mutex::history())
+        , history(h)
     {
         mutex.lock();
         omni_mutex::history(history | mutex.bit_value);

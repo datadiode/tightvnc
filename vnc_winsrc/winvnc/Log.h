@@ -53,7 +53,7 @@ public:
         va_end(ap);
     }
 
-    omni_mutex &Validate(omni_mutex &, char const *format);
+    UINT_PTR Validate(omni_mutex &, char const *format);
     
     // Change the log level
     void SetLevel(int level);

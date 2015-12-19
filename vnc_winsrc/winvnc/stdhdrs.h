@@ -81,6 +81,6 @@ public:
 	struct _CRT_APPEND(omni_mutex_lock_, __LINE__) : omni_mutex_lock \
 	{ \
 		_CRT_APPEND(omni_mutex_lock_, __LINE__)(omni_mutex &m) \
-		: omni_mutex_lock(vnclog.Validate(m, VNCLOG("Potential deadlock -> %hs\n"))) { } \
+		: omni_mutex_lock(m, vnclog.Validate(m, VNCLOG("Potential deadlock -> %s\n"))) { } \
 	}
 
