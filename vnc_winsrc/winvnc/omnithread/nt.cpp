@@ -41,8 +41,10 @@ static void get_time_now(unsigned long* abs_sec, unsigned long* abs_nsec);
 //
 ///////////////////////////////////////////////////////////////////////////
 
+DWORD const omni_mutex::tls_index = TlsAlloc();
 
-omni_mutex::omni_mutex(void)
+omni_mutex::omni_mutex(UINT_PTR bit_value)
+    : bit_value(bit_value)
 {
     InitializeCriticalSection(&crit);
 }

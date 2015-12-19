@@ -192,7 +192,7 @@ protected:
 	vncRegion		m_changed_rgn;
 	vncRegion		m_incr_rgn;
 	vncRegion		m_full_rgn;
-	omni_mutex		m_regionLock;
+	vncMutex<eRegionLock>	m_regionLock;
 
 	BOOL			m_copyrect_set;
 	RECT			m_copyrect_rect;

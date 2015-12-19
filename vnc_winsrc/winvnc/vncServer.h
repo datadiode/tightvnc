@@ -426,9 +426,9 @@ protected:
 	vncClientId			m_nextid;
 
 	// Lock to protect the client list from concurrency - lock when reading/updating client list
-	omni_mutex			m_clientsLock;
+	vncMutex<eClientsLock>	m_clientsLock;
 	// Lock to protect the desktop object from concurrency - lock when updating client list
-	omni_mutex			m_desktopLock;
+	vncMutex<eDesktopLock>	m_desktopLock;
 
 	// Signal set when a client removes itself
 	omni_condition		*m_clientquitsig;

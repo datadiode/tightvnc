@@ -177,19 +177,28 @@ class _OMNITHREAD_NTDLL_ omni_thread_invalid {};
 class _OMNITHREAD_NTDLL_ omni_mutex {
 
 public:
-    omni_mutex(void);
+    omni_mutex(UINT_PTR bit_value = 1);
     ~omni_mutex(void);
-
-    void lock(void);
-    void unlock(void);
-    void acquire(void) { lock(); }
-    void release(void) { unlock(); }
-	// the names lock and unlock are preferred over acquire and release
-	// since we are attempting to be as POSIX-like as possible.
-
-    friend class omni_condition;
+    static UINT_PTR history()
+    {
+        return reinterpret_cast<UINT_PTR>(TlsGetValue(tls_index));
+    }
+    static void history(UINT_PTR history)
+    {
+        TlsSetValue(tls_index, reinterpret_cast<LPVOID>(history));
+    }
+    UINT_PTR const bit_value;
 
 private:
+    void lock(void);
+    void unlock(void);
+
+    friend class omni_condition;
+    friend class omni_thread;
+    friend class omni_mutex_lock;
+
+    static DWORD const tls_index;
+
     // dummy copy constructor and operator= to prevent copying
     omni_mutex(const omni_mutex&);
     omni_mutex& operator=(const omni_mutex&);
@@ -218,10 +227,21 @@ OMNI_THREAD_EXPOSE:
 //
 
 class _OMNITHREAD_NTDLL_ omni_mutex_lock {
-    omni_mutex& mutex;
 public:
-    omni_mutex_lock(omni_mutex& m) : mutex(m) { mutex.lock(); }
-    ~omni_mutex_lock(void) { mutex.unlock(); }
+    omni_mutex& mutex;
+    UINT_PTR const history;
+    omni_mutex_lock(omni_mutex& m)
+        : mutex(m)
+        , history(omni_mutex::history())
+    {
+        mutex.lock();
+        omni_mutex::history(history | mutex.bit_value);
+    }
+    ~omni_mutex_lock(void)
+    {
+        omni_mutex::history(history);
+        mutex.unlock();
+    }
 private:
     // dummy copy constructor and operator= to prevent copying
     omni_mutex_lock(const omni_mutex_lock&);

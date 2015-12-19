@@ -23,8 +23,8 @@
 // whence you received this file, check http://www.uk.research.att.com/vnc or contact
 // the authors on vnc@uk.research.att.com for information on obtaining it.
 
-
-// #define VC_EXTRALEAN
+#pragma once
+#define VC_EXTRALEAN
 #define STRICT
 
 #include <winsock2.h>
@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <process.h>
 #include <crtdbg.h>
+#include <omnithread.h>
 
 extern const char* g_buildTime;
 
@@ -61,4 +62,25 @@ extern Log vnclog;
 #define LL_SOCKINFO	10
 // Log everything, including internal table setup, etc.
 #define LL_ALL		10
+
+enum vncMutexLevel // ordering is from innermost to outermost level
+{
+	eRegionLock,
+	eClientsLock,
+	eDesktopLock,
+};
+
+template<int level>
+struct vncMutex : omni_mutex
+{
+public:
+	vncMutex(): omni_mutex(1 << level) { }
+};
+
+#define omni_mutex_lock \
+	struct _CRT_APPEND(omni_mutex_lock_, __LINE__) : omni_mutex_lock \
+	{ \
+		_CRT_APPEND(omni_mutex_lock_, __LINE__)(omni_mutex &m) \
+		: omni_mutex_lock(vnclog.Validate(m, VNCLOG("Potential deadlock -> %hs\n"))) { } \
+	}
 

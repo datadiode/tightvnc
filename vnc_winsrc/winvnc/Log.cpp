@@ -231,6 +231,23 @@ void Log::ReallyPrint(char const *format, va_list ap)
 	ReallyPrintLine(line);
 }
 
+omni_mutex &Log::Validate(omni_mutex &mutex, char const *format)
+{
+	UINT_PTR const history = omni_mutex::history();
+	if ((history & mutex.bit_value) < (history & mutex.bit_value - 1))
+	{
+		char q[40], *p = q;
+		UINT_PTR bit = 1U << 31;
+		do
+		{
+			*p++ = mutex.bit_value & bit ? '*' : history & bit ? '1' : '0';
+		} while (bit >>= 1);
+		*p = '\0';
+		Print(LL_INTWARN, format, q);
+	}
+	return mutex;
+}
+
 Log::~Log()
 {
 	if (m_filename != NULL)
