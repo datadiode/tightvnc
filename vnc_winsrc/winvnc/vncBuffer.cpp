@@ -165,17 +165,6 @@ vncBuffer::CheckBuffer()
 
 	m_bytesPerRow = m_scrinfo.framebufferWidth * m_scrinfo.format.bitsPerPixel/8;
 
-	// Check the client buffer is sufficient
-	const UINT clientbuffsize =
-	    m_encoder->RequiredBuffSize(m_scrinfo.framebufferWidth,
-					m_scrinfo.framebufferHeight);
-	if (m_clientbuffsize < clientbuffsize)
-	{
-		delete [] m_clientbuff;
-		m_clientbuff = NULL;
-		m_clientbuffsize = clientbuffsize;
-	}
-
 	// Take the main buffer pointer and size from vncDesktop 
 	m_mainbuff = m_desktop->MainBuffer();
 	m_mainrect = m_desktop->MainBufferRect();
@@ -185,9 +174,6 @@ vncBuffer::CheckBuffer()
 
 	return TRUE;
 }
-
-
-
 
 UINT
 vncBuffer::GetNumCodedRects(RECT &rect)
@@ -465,11 +451,18 @@ UINT vncBuffer::TranslateRect(
 	ar.right = rect.right - m_mainrect.left;
 	ar.bottom = rect.bottom - m_mainrect.top;
 
-	if (m_clientbuff == NULL)
+	// Check the client buffer is sufficient
+	const UINT clientbuffsize = m_encoder->RequiredBuffSize(
+		m_scrinfo.framebufferWidth, m_scrinfo.framebufferHeight);
+	if (m_clientbuffsize < clientbuffsize)
 	{
-		m_clientbuff = new BYTE[m_clientbuffsize];
+		delete [] m_clientbuff;
+		m_clientbuff = NULL;
+		m_clientbuffsize = 0;
+		m_clientbuff = new BYTE[clientbuffsize];
 		if (m_clientbuff == NULL)
 			return 0;
+		m_clientbuffsize = clientbuffsize;
 		ZeroMemory(m_clientbuff, m_clientbuffsize);
 	}
 
