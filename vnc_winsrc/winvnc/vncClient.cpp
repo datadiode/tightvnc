@@ -2196,8 +2196,11 @@ BOOL vncClient::SendRectangle(RECT &rect)
 		sharedRect.left,
 		sharedRect.top);
 
-    // Send the encoded data
-    return m_socket->SendQueued((char *)(m_buffer->GetClientBuffer()), bytes);
+	if (BYTE *const buff = m_buffer->GetClientBuffer())
+		return m_socket->SendQueued(reinterpret_cast<char *>(buff), bytes);
+
+	Kill();
+	return FALSE;
 }
 
 // Send a single CopyRect message

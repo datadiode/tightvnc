@@ -101,8 +101,8 @@ protected:
 	RECT		m_mainrect;
 	UINT		m_mainsize;
 
-	BYTE		*m_clientbuff;
-	UINT		m_clientbuffsize;
+	static BYTE	*m_clientbuff;
+	static UINT	m_clientbuffsize;
 	BOOL		m_clientfmtset;
 
 	UINT		m_bytesPerRow;

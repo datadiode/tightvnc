@@ -45,6 +45,8 @@
 #include "vncBuffer.h"
 
 // Implementation
+BYTE *vncBuffer::m_clientbuff = NULL; // deallocated upon process termination
+UINT vncBuffer::m_clientbuffsize = 0;
 
 vncBuffer::vncBuffer(vncDesktop *desktop)
 {
@@ -67,9 +69,7 @@ vncBuffer::vncBuffer(vncDesktop *desktop)
 
 	m_mainbuff = NULL;
 	m_mainsize = 0;
-	
-	m_clientbuff = NULL;
-	m_clientbuffsize = 0;
+
 	m_clientfmtset = FALSE;
 
 	// Initialise the screen buffers
@@ -78,8 +78,6 @@ vncBuffer::vncBuffer(vncDesktop *desktop)
 
 vncBuffer::~vncBuffer()
 {
-
-
 	if (m_hold_zlib_encoder != NULL && m_hold_zlib_encoder != m_encoder) {
 		m_hold_zlib_encoder->LogStats();
 		delete m_hold_zlib_encoder;
@@ -103,11 +101,6 @@ vncBuffer::~vncBuffer()
 		m_hold_tight_encoder = NULL;
 		m_hold_zlibhex_encoder = NULL;
 	}
-	if (m_clientbuff != NULL) {
-		delete m_clientbuff;
-		m_clientbuff = NULL;
-	}
-	m_clientbuffsize = 0;
 	m_mainsize = 0;
 }
 
@@ -176,32 +169,18 @@ vncBuffer::CheckBuffer()
 	const UINT clientbuffsize =
 	    m_encoder->RequiredBuffSize(m_scrinfo.framebufferWidth,
 					m_scrinfo.framebufferHeight);
-	if (m_clientbuffsize != clientbuffsize)
+	if (m_clientbuffsize < clientbuffsize)
 	{
-	    if (m_clientbuff != NULL)
-	    {
 		delete [] m_clientbuff;
 		m_clientbuff = NULL;
-	    }
-	    m_clientbuffsize = 0;
-
-	    m_clientbuff = new BYTE [clientbuffsize];
-	    if (m_clientbuff == NULL)
-	    {		
-		vnclog.Print(LL_INTERR, VNCLOG("unable to allocate client buffer[%d]\n"), clientbuffsize);
-		return FALSE;
-	    }
-
-	    m_clientbuffsize = clientbuffsize;
-
-	    ZeroMemory(m_clientbuff, m_clientbuffsize);
+		m_clientbuffsize = clientbuffsize;
 	}
 
 	// Take the main buffer pointer and size from vncDesktop 
 	m_mainbuff = m_desktop->MainBuffer();
 	m_mainrect = m_desktop->MainBufferRect();
 	m_mainsize = m_desktop->ScreenBuffSize();
-		
+
 	vnclog.Print(LL_INTINFO, VNCLOG("local buffer=%d, remote buffer=%d\n"), m_mainsize, m_clientbuffsize);
 
 	return TRUE;
@@ -485,6 +464,14 @@ UINT vncBuffer::TranslateRect(
 	ar.top = rect.top -  m_mainrect.top;
 	ar.right = rect.right - m_mainrect.left;
 	ar.bottom = rect.bottom - m_mainrect.top;
+
+	if (m_clientbuff == NULL)
+	{
+		m_clientbuff = new BYTE[m_clientbuffsize];
+		if (m_clientbuff == NULL)
+			return 0;
+		ZeroMemory(m_clientbuff, m_clientbuffsize);
+	}
 
 	return m_encoder->EncodeRect(
 		m_mainbuff,
