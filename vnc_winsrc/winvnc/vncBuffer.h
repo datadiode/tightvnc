@@ -102,7 +102,7 @@ protected:
 	UINT		m_mainsize;
 
 	static BYTE	*m_clientbuff;
-	static UINT	m_clientbuffsize;
+	UINT		m_clientbuffsize;
 	BOOL		m_clientfmtset;
 
 	UINT		m_bytesPerRow;
@@ -111,13 +111,10 @@ protected:
 	rfbPixelFormat		m_clientformat;
 	rfbTranslateFnType	m_transfunc;
 
-	vncDesktop	   *m_desktop;
+	vncDesktop	   *const m_desktop;
 	vncEncoder	   *m_encoder;
-	bool           zlib_encoder_in_use;
 	vncEncoder     *m_hold_zlib_encoder;
-	bool           tight_encoder_in_use;
 	vncEncoder     *m_hold_tight_encoder;
-	bool           zlibhex_encoder_in_use;
 	vncEncoder     *m_hold_zlibhex_encoder;
 
 	// These variables mirror similar variables from vncEncoder class.

@@ -46,17 +46,13 @@
 
 // Implementation
 BYTE *vncBuffer::m_clientbuff = NULL; // deallocated upon process termination
-UINT vncBuffer::m_clientbuffsize = 0;
 
 vncBuffer::vncBuffer(vncDesktop *desktop)
+	: m_desktop(desktop)
 {
-	m_desktop = desktop;
 	m_encoder = NULL;
-	zlib_encoder_in_use = false;
 	m_hold_zlib_encoder = NULL;
-	tight_encoder_in_use = false;
 	m_hold_tight_encoder = NULL;
-	zlibhex_encoder_in_use = false;
 	m_hold_zlibhex_encoder = NULL;
 
 	m_compresslevel = 6;
@@ -70,6 +66,7 @@ vncBuffer::vncBuffer(vncDesktop *desktop)
 	m_mainbuff = NULL;
 	m_mainsize = 0;
 
+	m_clientbuffsize = 0;
 	m_clientfmtset = FALSE;
 
 	// Initialise the screen buffers
@@ -81,27 +78,19 @@ vncBuffer::~vncBuffer()
 	if (m_hold_zlib_encoder != NULL && m_hold_zlib_encoder != m_encoder) {
 		m_hold_zlib_encoder->LogStats();
 		delete m_hold_zlib_encoder;
-		m_hold_zlib_encoder = NULL;
 	}
 	if (m_hold_tight_encoder != NULL && m_hold_tight_encoder != m_encoder) {
 		m_hold_tight_encoder->LogStats();
 		delete m_hold_tight_encoder;
-		m_hold_tight_encoder = NULL;
 	}
 	if (m_hold_zlibhex_encoder != NULL && m_hold_zlibhex_encoder != m_encoder) {
 		m_hold_zlibhex_encoder->LogStats();
 		delete m_hold_zlibhex_encoder;
-		m_hold_zlibhex_encoder = NULL;
 	}
 	if (m_encoder != NULL) {
 		m_encoder->LogStats();
 		delete m_encoder;
-		m_encoder = NULL;
-		m_hold_zlib_encoder = NULL;
-		m_hold_tight_encoder = NULL;
-		m_hold_zlibhex_encoder = NULL;
 	}
-	m_mainsize = 0;
 }
 
 RECT
@@ -165,6 +154,10 @@ vncBuffer::CheckBuffer()
 
 	m_bytesPerRow = m_scrinfo.framebufferWidth * m_scrinfo.format.bitsPerPixel/8;
 
+	// Compute the required client buffer size
+	m_clientbuffsize = m_encoder->RequiredBuffSize(
+		m_scrinfo.framebufferWidth, m_scrinfo.framebufferHeight);
+
 	// Take the main buffer pointer and size from vncDesktop 
 	m_mainbuff = m_desktop->MainBuffer();
 	m_mainrect = m_desktop->MainBufferRect();
@@ -218,35 +211,17 @@ vncBuffer::SetEncoding(CARD32 encoding)
 	//m_desktop->FillDisplayInfo(&m_scrinfo);
 
 	// Delete the old encoder
-	if (m_encoder != NULL)
+	// If a Zlib-like encoders were in use, save corresponding object
+	// (with dictionaries) for possible later use on this connection.
+	if (m_encoder != NULL &&
+		m_encoder != m_hold_zlib_encoder &&
+		m_encoder != m_hold_tight_encoder &&
+		m_encoder != m_hold_zlibhex_encoder)
 	{
-		// If a Zlib-like encoders were in use, save corresponding object
-		// (with dictionaries) for possible later use on this connection.
-		if ( zlib_encoder_in_use )
-		{
-			m_hold_zlib_encoder = m_encoder;
-		}
-		else if ( tight_encoder_in_use )
-		{
-			m_hold_tight_encoder = m_encoder;
-		}
-		else if ( zlibhex_encoder_in_use )
-		{
-			m_hold_zlibhex_encoder = m_encoder;
-		}
-		else
-		{
-			m_encoder->LogStats();
-			delete m_encoder;
-		}
+		m_encoder->LogStats();
+		delete m_encoder;
 		m_encoder = NULL;
 	}
-
-	// Expect to not use the zlib encoder below.  However, this
-	// is overriden if zlib was selected.
-	zlib_encoder_in_use = false;
-	tight_encoder_in_use = false;
-	zlibhex_encoder_in_use = false;
 
 	// Returns FALSE if the desired encoding cannot be used
 	switch(encoding)
@@ -299,17 +274,11 @@ vncBuffer::SetEncoding(CARD32 encoding)
 		// Create a Zlib encoder, if needed.
 		// If a Zlib encoder was used previously, then reuse it here
 		// to maintain zlib dictionary synchronization with the viewer.
-		if ( m_hold_zlib_encoder == NULL )
-		{
-			m_encoder = new vncEncodeZlib;
-		}
-		else
-		{
-			m_encoder = m_hold_zlib_encoder;
-		}
+		if (m_hold_zlib_encoder == NULL)
+			m_hold_zlib_encoder = new vncEncodeZlib;
+		m_encoder = m_hold_zlib_encoder;
 		if (m_encoder == NULL)
 			return FALSE;
-		zlib_encoder_in_use = true;
 		break;
 
 	case rfbEncodingTight:
@@ -319,17 +288,11 @@ vncBuffer::SetEncoding(CARD32 encoding)
 		// Create a Tight encoder, if needed.
 		// If a Tight encoder was used previously, then reuse it here
 		// to maintain zlib dictionaries synchronization with the viewer.
-		if ( m_hold_tight_encoder == NULL )
-		{
-			m_encoder = new vncEncodeTight;
-		}
-		else
-		{
-			m_encoder = m_hold_tight_encoder;
-		}
+		if (m_hold_tight_encoder == NULL)
+			m_hold_tight_encoder = new vncEncodeTight;
+		m_encoder = m_hold_tight_encoder;
 		if (m_encoder == NULL)
 			return FALSE;
-		tight_encoder_in_use = true;
 		break;
 
 	case rfbEncodingZlibHex:
@@ -339,17 +302,11 @@ vncBuffer::SetEncoding(CARD32 encoding)
 		// Create a ZlibHex encoder, if needed.
 		// If a ZlibHex encoder was used previously, then reuse it here
 		// to maintain zlib dictionary synchronization with the viewer.
-		if ( m_hold_zlibhex_encoder == NULL )
-		{
-			m_encoder = new vncEncodeZlibHex;
-		}
-		else
-		{
-			m_encoder = m_hold_zlibhex_encoder;
-		}
+		if (m_hold_zlibhex_encoder == NULL)
+			m_hold_zlibhex_encoder = new vncEncodeZlibHex;
+		m_encoder = m_hold_zlibhex_encoder;
 		if (m_encoder == NULL)
 			return FALSE;
-		zlibhex_encoder_in_use = true;
 		break;
 
 	default:
@@ -452,18 +409,20 @@ UINT vncBuffer::TranslateRect(
 	ar.bottom = rect.bottom - m_mainrect.top;
 
 	// Check the client buffer is sufficient
-	const UINT clientbuffsize = m_encoder->RequiredBuffSize(
-		m_scrinfo.framebufferWidth, m_scrinfo.framebufferHeight);
-	if (m_clientbuffsize < clientbuffsize)
+	static UINT clientbuffsize = 0;
+	if (clientbuffsize < m_clientbuffsize)
 	{
 		delete [] m_clientbuff;
 		m_clientbuff = NULL;
-		m_clientbuffsize = 0;
-		m_clientbuff = new BYTE[clientbuffsize];
+		clientbuffsize = 0;
+		m_clientbuff = new BYTE[m_clientbuffsize];
 		if (m_clientbuff == NULL)
+		{
+			vnclog.Print(LL_INTERR, VNCLOG("unable to allocate client buffer[%d]\n"), m_clientbuffsize);
 			return 0;
-		m_clientbuffsize = clientbuffsize;
-		ZeroMemory(m_clientbuff, m_clientbuffsize);
+		}
+		clientbuffsize = m_clientbuffsize;
+		ZeroMemory(m_clientbuff, clientbuffsize);
 	}
 
 	return m_encoder->EncodeRect(
